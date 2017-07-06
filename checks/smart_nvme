@@ -1,0 +1,21 @@
+#!/bin/bash
+DIRS=`find /dev -type c | grep nvme | sort --numeric-sort`
+
+for DISK in $DIRS
+do
+        SPARES=`smartctl --attributes $DISK | grep 'Available Spare:' | sed --expression='s/:  */ /g' --expression='s/ /_/g'`
+        if [ `echo $SPARES | awk --field-separator _ '{print $3}' | tr -d \%` -ge 11 ]; then
+                status=0
+                statustxt=OK
+        elif [ `echo $SPARES | awk --field-separator _ '{print $3}' | tr -d \%` -eq 10 ]; then
+                status=1
+                statustxt=WARNING
+        elif [ `echo $SPARES | awk --field-separator _ '{print $3}' | tr -d \%` -le 9 ]; then
+                status=2
+                statustxt=CRITICAL
+        else
+                status=3
+                statustxt=UNKNOWN
+        fi
+        echo "$status NVMe_$DISK count=$SPARES;11;10;9; $statustxt - `echo $SPARES | sed 's/_/ /g'`"
+done
